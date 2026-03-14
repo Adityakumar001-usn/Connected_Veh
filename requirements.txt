@@ -2,3 +2,4 @@ traci
 pandas
 matplotlib
 sumolib
+streamlit

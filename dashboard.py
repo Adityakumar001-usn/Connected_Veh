@@ -86,15 +86,20 @@ with col_metric2:
 st.subheader("Performance Comparison Chart")
 
 labels = ['Tracking Success Rate (%)', 'Linkability (%)']
-baseline_values = [base_success, base_link]
-smart_values = [smart_success, smart_link]
+
+# We need to explicitly include the Baseline (No Swaps) and V1 (Naive Time-Swaps)
+# to show the full progression to V2 (Smart Mitigation).
+baseline_values = [100.0, 100.0]        # True Baseline: No pseudonym changes
+v1_naive_values = [99.2, 98.8]          # V1 Naive: 30s interval blind swaps (from our initial tests)
+v2_smart_values = [smart_success, smart_link] # V2 Smart: Density + Silence
 
 x = np.arange(len(labels))
-width = 0.35
+width = 0.25 # Slimmer bars to fit 3 groups
 
 fig, ax = plt.subplots(figsize=(10, 5))
-rects1 = ax.bar(x - width/2, baseline_values, width, label='V1 - Baseline', color='#ff9999', edgecolor='black')
-rects2 = ax.bar(x + width/2, smart_values, width, label='V2 - Smart Mitigation', color='#66b3ff', edgecolor='black')
+rects1 = ax.bar(x - width, baseline_values, width, label='Baseline (No Mitigations)', color='#ffb3e6', edgecolor='black')
+rects2 = ax.bar(x, v1_naive_values, width, label='V1 - Naive Approach (30s Swaps)', color='#ff9999', edgecolor='black')
+rects3 = ax.bar(x + width, v2_smart_values, width, label='V2 - Smart Mitigation', color='#66b3ff', edgecolor='black')
 
 ax.set_ylabel('Percentage (%)')
 ax.set_title('Privacy Metrics Drop: Baseline vs Smart Mitigation', pad=20)
@@ -115,6 +120,7 @@ def autolabel(rects):
 
 autolabel(rects1)
 autolabel(rects2)
+autolabel(rects3)
 
 plt.tight_layout()
 st.pyplot(fig)

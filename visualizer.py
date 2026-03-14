@@ -132,10 +132,10 @@ def generate_comparison_chart(baseline_metrics, mitigated_metrics, output_dir="r
     fig, ax = plt.subplots(figsize=(8, 6))
 
     bars1 = ax.bar([p - width/2 for p in x], baseline_values, width, label='Baseline', color='#ff9999')
-    bars2 = ax.bar([p + width/2 for p in x], mitigated_values, width, label='Mitigated', color='#66b3ff')
+    bars2 = ax.bar([p + width/2 for p in x], mitigated_values, width, label='Smart Mitigation', color='#66b3ff')
 
     ax.set_ylabel('Percentage (%)')
-    ax.set_title('Privacy Metrics Comparison: Baseline vs Mitigated')
+    ax.set_title('Privacy Metrics Comparison: Baseline vs Smart Mitigation')
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_ylim(0, 110)

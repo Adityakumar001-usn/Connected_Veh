@@ -7,12 +7,12 @@ def generate_network(output_dir="net"):
     net_file = os.path.join(output_dir, "grid.net.xml")
 
     # We use netgenerate to build a simple grid network
-    # For example, a 5x5 grid with 200m distance between junctions
+    # For example, a 5x5 grid with 100m distance between junctions to make routes highly dense
     cmd = [
         "netgenerate",
         "--grid",
         "--grid.number", "5",
-        "--grid.length", "200",
+        "--grid.length", "100",
         "--output-file", net_file,
         "--no-turnarounds", "true"
     ]

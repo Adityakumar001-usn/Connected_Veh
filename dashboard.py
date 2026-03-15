@@ -42,10 +42,21 @@ st.divider()
 # --- 2. The Strategy Comparison ---
 st.header("The Strategies (Progressive Architecture)")
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.subheader("V1 - Naive Approach")
+    st.subheader("V1 - Baseline")
+    st.markdown("""
+    Vehicles use static identifiers for the duration of their trip. They continuously broadcast Basic Safety Messages (BSMs) with their real identities, making it trivial for an observer to track their full spatial-temporal path.
+    """)
+    st.code("""
+# No Mitigations
+vehicle.pseudonym = vehicle.original_id
+# Broadcasts continuously
+    """, language="python")
+
+with col2:
+    st.subheader("V2 - Naive Approach")
     st.markdown("""
     Vehicles blindly swap their pseudonyms at a fixed time interval (e.g., every 3 seconds), regardless of their surroundings.
     Because the vehicle is easily visible before and after the swap, the attacker can seamlessly link the new pseudonym to the old one based on trajectory continuation.
@@ -56,8 +67,8 @@ if current_time - last_swap_time >= 3:
     vehicle.pseudonym = generate_new_pseudonym()
     """, language="python")
 
-with col2:
-    st.subheader("V2 - Smart Mitigation")
+with col3:
+    st.subheader("V3 - Smart Mitigation")
     st.markdown("""
     Introduces a **Vehicle-Level Mix Zone**. A vehicle only changes its ID if it detects at least 2 other vehicles within a 50-meter radius.
     Once triggered, it undergoes a **Radio Silence Period**, stopping BSM broadcasts for a random 3 to 6 seconds while moving, thoroughly breaking the attacker's trajectory tracking.
@@ -69,7 +80,7 @@ if nearby_vehicles >= 2:
     vehicle.silence_timer = random.randint(3, 6)
     """, language="python")
 
-with col3:
+with col4:
     st.subheader("V4 - Hybrid Mitigation")
     st.markdown("""
     Introduces the **Cooperative Handshake** and **Adaptive Silence**. If a vehicle meets the density threshold, it checks if any neighbors also need a swap. They then perform the pseudonym swap simultaneously at the exact same simulation step.
@@ -171,7 +182,12 @@ st.divider()
 st.info("""
 **Engineering Insights**
 
-While V3 (Smart Mitigation) broke digital linkability (0%), V4 (Hybrid Mitigation) successfully attacks the physical spatial-temporal tracking. By forcing vehicles to swap in synchronized cooperative groups and dynamically adjusting silence periods to their physics (velocity), the attacker's trajectory reconstruction heuristics are completely overwhelmed. The result is a massive digital privacy victory without requiring heavy infrastructure.
+**Interpreting the Results:**
+1. **The Baseline & Naive Failures:** Without mitigation, or with blind swaps, an attacker can easily track almost 100% of a vehicle's trajectory and link its digital identities.
+2. **V3 (Smart Mitigation) - The Digital Victory:** By waiting for density and using random silence, we successfully broke the digital identity chain (**0% Linkability**). However, because road networks constrain physical movement, the attacker could still physically estimate ~82% of the trajectory.
+3. **V4 (Hybrid Mitigation) - Attacking Physical Tracking:** By introducing the Cooperative Handshake and Velocity-Adaptive Silence, we force vehicles to swap and go silent as synchronized groups with dynamic durations. This further degraded the attacker's physical tracking success down to **~74.9%**.
+
+**The Takeaway:** While completely hiding physical movement on constrained roads is notoriously difficult without RSU infrastructure, the V4 Hybrid Mitigation proves that a purely decentralized, vehicle-to-vehicle algorithm can entirely defeat digital linking (0%) while degrading physical tracking by nearly 25%, establishing a robust privacy shield for connected vehicles.
 """)
 
 st.markdown("""

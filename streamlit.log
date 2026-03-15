@@ -7,3 +7,17 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
   Local URL: http://localhost:8501
   Network URL: http://192.168.0.2:8501
   External URL: http://34.46.237.233:8501
+
+Task exception was never retrieved
+future: <Task finished name='Task-520' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError

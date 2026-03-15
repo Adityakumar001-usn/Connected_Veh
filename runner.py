@@ -13,13 +13,15 @@ tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
 sys.path.append(tools)
 
 import random
+import json
 
-def run_simulation(config_file, change_interval=None, smart_mitigation=False, end_time=1000):
+def run_simulation(config_file, change_interval=None, smart_mitigation=False, hybrid_mitigation=False, end_time=1000):
     """
     Runs the SUMO simulation and feeds BSMs to the Attacker.
     change_interval: If None, baseline scenario (no pseudonym changes).
                      If an integer (e.g., 30), pseudonym changes every 30s.
     smart_mitigation: If True, uses density-based swapping and silence periods.
+    hybrid_mitigation: If True, uses cooperative swapping and velocity-adaptive silence.
     """
     # Start SUMO via TraCI
     # --no-step-log --no-warnings to keep output clean
@@ -70,8 +72,10 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, en
 
                 if vehicle_id in pending_changes:
                     should_change = True
-                    if smart_mitigation:
-                        # Density-based swapping: Check if there are at least 2 OTHER vehicles within 100m
+                    cooperative_group = []
+
+                    if smart_mitigation or hybrid_mitigation:
+                        # Density-based swapping: Check if there are at least 2 OTHER vehicles within 50m
                         nearby_vehicles = 0
 
                         # Optimization: filter by bounding box first to avoid O(N^2)
@@ -83,24 +87,51 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, en
                                     dist = ((ox - x)**2 + (oy - y)**2)**0.5
                                     if dist <= 50.0:
                                         nearby_vehicles += 1
-                                        if nearby_vehicles >= 2:
-                                            break # We only need to know if there are at least 2
+                                        if hybrid_mitigation and other_id in pending_changes:
+                                            cooperative_group.append(other_id)
+                                        # Only break early if we aren't collecting a full cooperative group
+                                        if not hybrid_mitigation and nearby_vehicles >= 2:
+                                            break
 
                         if nearby_vehicles < 2:
                             should_change = False
 
+                        if hybrid_mitigation and len(cooperative_group) == 0:
+                            # Must swap with someone who ALSO needs a swap
+                            should_change = False
+
                     if should_change:
-                        # Time to swap pseudonym
+                        # Process swap for the primary vehicle
                         pseudo = f"P_{pseudonym_counter}"
                         pseudonym_counter += 1
                         trusted_backend[vehicle_id] = pseudo
                         last_change_time[vehicle_id] = step
                         pending_changes.remove(vehicle_id)
 
-                        if smart_mitigation:
-                            # Enter silence period: stop broadcasting for 3 to 6 seconds
+                        if hybrid_mitigation:
+                            # V4: Adaptive silence based on the primary vehicle's physics.
+                            silence_duration = max(3.0, min(10.0, 100.0 / max(0.1, speed)))
+                            # Convert to integer steps
+                            silence_duration = int(silence_duration)
+                            silence_periods[vehicle_id] = step + silence_duration
+                        elif smart_mitigation:
                             silence_duration = random.randint(3, 6)
                             silence_periods[vehicle_id] = step + silence_duration
+
+                        # If hybrid, also swap the neighbors synchronously
+                        if hybrid_mitigation:
+                            for neighbor_id in cooperative_group:
+                                pseudo = f"P_{pseudonym_counter}"
+                                pseudonym_counter += 1
+                                trusted_backend[neighbor_id] = pseudo
+                                last_change_time[neighbor_id] = step
+                                if neighbor_id in pending_changes:
+                                    pending_changes.remove(neighbor_id)
+
+                                # V4 Adaptive Silence: Use the neighbor's own physics to calculate silence!
+                                n_speed = traci.vehicle.getSpeed(neighbor_id)
+                                n_silence = max(3.0, min(10.0, 100.0 / max(0.1, n_speed)))
+                                silence_periods[neighbor_id] = step + int(n_silence)
 
             # Get current pseudonym
             current_pseudonym = trusted_backend[vehicle_id]
@@ -117,7 +148,7 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, en
             })
 
             # Broadcast BSM to Attacker (Attacker ONLY sees this if not in a silence period)
-            is_silent = smart_mitigation and vehicle_id in silence_periods and step < silence_periods[vehicle_id]
+            is_silent = vehicle_id in silence_periods and step < silence_periods[vehicle_id]
             if not is_silent:
                 attacker.process_bsm(current_pseudonym, x, y, speed, angle, step)
 
@@ -138,25 +169,37 @@ if __name__ == "__main__":
     route_file = generate_routes(net_file, num_vehicles=200, end_time=1000)
     config_file = generate_sumo_config(net_file, route_file)
 
-    print("\nRunning Baseline Scenario (No Pseudonym Changes)...")
+    print("\nRunning Scenario 1: Baseline (No Pseudonym Changes)...")
     base_routes, base_ground_truth = run_simulation(config_file, change_interval=None, end_time=1000)
 
-    print("Running Smart Mitigation Scenario (Density + Silence)...")
-    mit_routes, mit_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=True, end_time=1000)
+    print("Running Scenario 2: Naive (Blind 3s Swaps)...")
+    naive_routes, naive_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=False, end_time=1000)
+
+    print("Running Scenario 3: Smart Mitigation (Density + Random Silence)...")
+    smart_routes, smart_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=True, hybrid_mitigation=False, end_time=1000)
+
+    print("Running Scenario 4: Hybrid Mitigation (Cooperative Swap + Adaptive Silence)...")
+    hybrid_routes, hybrid_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=True, end_time=1000)
 
     print("\nCalculating Metrics...")
-    # Evaluate Baseline
-    baseline_metrics = calculate_metrics(base_routes, base_ground_truth)
-    print("--- Baseline Metrics ---")
-    for k, v in baseline_metrics.items():
-        print(f"{k}: {v:.2f}")
+    metrics_data = {
+        "Baseline": calculate_metrics(base_routes, base_ground_truth),
+        "Naive": calculate_metrics(naive_routes, naive_ground_truth),
+        "Smart": calculate_metrics(smart_routes, smart_ground_truth),
+        "Hybrid": calculate_metrics(hybrid_routes, hybrid_ground_truth)
+    }
 
-    # Evaluate Mitigated
-    mitigated_metrics = calculate_metrics(mit_routes, mit_ground_truth)
-    print("\n--- Smart Mitigation Metrics ---")
-    for k, v in mitigated_metrics.items():
-        print(f"{k}: {v:.2f}")
+    for scenario, metrics in metrics_data.items():
+        print(f"\n--- {scenario} Metrics ---")
+        for k, v in metrics.items():
+            print(f"{k}: {v:.2f}")
 
-    print("\nGenerating Comparison Chart...")
-    generate_comparison_chart(baseline_metrics, mitigated_metrics)
+    # Save metrics to JSON so dashboard.py can read them dynamically
+    os.makedirs("results", exist_ok=True)
+    with open("results/metrics.json", "w") as f:
+        json.dump(metrics_data, f, indent=4)
+    print("\nMetrics saved to results/metrics.json for dashboard usage.")
+
+    # Generate the comparison chart (if you still want the legacy image generator)
+    generate_comparison_chart(metrics_data["Baseline"], metrics_data["Smart"])
     print("Simulation complete!")

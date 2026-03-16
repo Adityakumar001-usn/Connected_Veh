@@ -31,8 +31,10 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
     traci_args = [sumo_cmd, "-c", config_file, "--no-step-log", "true", "--no-warnings", "true"]
 
     # If using GUI, force it to automatically press "Play" so it doesn't pause at step 0
+    # Also force it to automatically quit when finished so it doesn't wait for user to click "Yes" to close.
     if use_gui:
         traci_args.append("--start")
+        traci_args.append("--quit-on-end")
 
     traci.start(traci_args)
 

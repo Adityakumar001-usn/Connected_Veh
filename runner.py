@@ -26,8 +26,15 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
     """
     # Start SUMO via TraCI
     sumo_cmd = "sumo-gui" if use_gui else "sumo"
-    # --no-step-log --no-warnings to keep output clean
-    traci.start([sumo_cmd, "-c", config_file, "--no-step-log", "true", "--no-warnings", "true"])
+
+    # Base arguments: --no-step-log --no-warnings to keep output clean
+    traci_args = [sumo_cmd, "-c", config_file, "--no-step-log", "true", "--no-warnings", "true"]
+
+    # If using GUI, force it to automatically press "Play" so it doesn't pause at step 0
+    if use_gui:
+        traci_args.append("--start")
+
+    traci.start(traci_args)
 
     attacker = Attacker(verbose=verbose)
 

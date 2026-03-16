@@ -1,9 +1,10 @@
 import os
 import sys
 import traci
-from network_gen import generate_network, generate_routes, generate_sumo_config
+from network_gen import generate_network, generate_routes, generate_gui_settings, generate_sumo_config
 from attacker import Attacker
 from visualizer import calculate_metrics, generate_comparison_chart
+import time
 
 # We need to make sure SUMO tools are in path
 if 'SUMO_HOME' not in os.environ:
@@ -186,6 +187,11 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
 
         step += 1
 
+        # If running in GUI mode for a live presentation, artificially slow down the python loop
+        # so the SUMO-GUI rendering engine has time to draw the frames and the human eye can watch.
+        if use_gui:
+            time.sleep(0.05) # ~20 frames per second
+
     traci.close()
 
     return attacker.reconstructed_routes, ground_truth
@@ -200,7 +206,8 @@ if __name__ == "__main__":
     print("Generating simulation environment...")
     net_file = generate_network()
     route_file = generate_routes(net_file, num_vehicles=200, end_time=1000)
-    config_file = generate_sumo_config(net_file, route_file)
+    gui_file = generate_gui_settings()
+    config_file = generate_sumo_config(net_file, route_file, gui_file)
 
     print("\nRunning Scenario 1: Baseline (No Pseudonym Changes)...")
     base_routes, base_ground_truth = run_simulation(config_file, change_interval=None, use_gui=args.gui, verbose=args.verbose, end_time=1000)

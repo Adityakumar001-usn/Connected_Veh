@@ -46,13 +46,32 @@ def generate_routes(net_file, output_dir="net", num_vehicles=100, end_time=1000)
     print(f"Routes generated at {route_file}")
     return route_file
 
-def generate_sumo_config(net_file, route_file, output_dir="net", config_name="sim.sumocfg"):
+def generate_gui_settings(output_dir="net", settings_name="gui-settings.xml"):
+    os.makedirs(output_dir, exist_ok=True)
+    settings_file = os.path.join(output_dir, settings_name)
+
+    # Create a GUI settings file that significantly exaggerates vehicle sizes
+    # so their colors (Green, Yellow, Red) are easily visible during a live presentation.
+    settings_content = """<?xml version="1.0" encoding="UTF-8"?>
+<viewsettings>
+    <scheme name="real world"/>
+    <vehicles vehicleName_show="0" vehicle_exaggeration="5.0" vehicleQuality="3" vehicle_minSize="10.0"/>
+</viewsettings>
+"""
+    with open(settings_file, "w") as f:
+        f.write(settings_content)
+
+    print(f"GUI settings generated at {settings_file}")
+    return settings_file
+
+def generate_sumo_config(net_file, route_file, gui_settings_file, output_dir="net", config_name="sim.sumocfg"):
     os.makedirs(output_dir, exist_ok=True)
     config_file = os.path.join(output_dir, config_name)
 
     # Extract just the filenames for the config if they are in the same dir
     net_name = os.path.basename(net_file)
     route_name = os.path.basename(route_file)
+    settings_name = os.path.basename(gui_settings_file)
 
     config_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
@@ -60,6 +79,9 @@ def generate_sumo_config(net_file, route_file, output_dir="net", config_name="si
         <net-file value="{net_name}"/>
         <route-files value="{route_name}"/>
     </input>
+    <gui_only>
+        <gui-settings-file value="{settings_name}"/>
+    </gui_only>
     <time>
         <begin value="0"/>
         <end value="1000"/>
@@ -78,4 +100,5 @@ def generate_sumo_config(net_file, route_file, output_dir="net", config_name="si
 if __name__ == "__main__":
     net = generate_network()
     rou = generate_routes(net)
-    generate_sumo_config(net, rou)
+    gui = generate_gui_settings()
+    generate_sumo_config(net, rou, gui)

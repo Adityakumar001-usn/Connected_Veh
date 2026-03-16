@@ -98,97 +98,146 @@ for neighbor in cooperative_group:
 
 st.divider()
 
-# --- 3. The Key Metrics ---
-st.header("Simulation Results")
+# --- Create Tabs for the Interface ---
+tab1, tab2 = st.tabs(["Metrics Comparison", "Trajectory Analysis"])
 
-col_metric1, col_metric2, col_metric3, col_metric4 = st.columns(4)
+with tab1:
+    # --- 3. The Key Metrics ---
+    st.header("Simulation Results")
 
-base_succ = metrics_data["Baseline"]["Tracking Success Rate (%)"]
-base_link = metrics_data["Baseline"]["Linkability (%)"]
-naive_succ = metrics_data["Naive"]["Tracking Success Rate (%)"]
-naive_link = metrics_data["Naive"]["Linkability (%)"]
-smart_succ = metrics_data["Smart"]["Tracking Success Rate (%)"]
-smart_link = metrics_data["Smart"]["Linkability (%)"]
-hybrid_succ = metrics_data["Hybrid"]["Tracking Success Rate (%)"]
-hybrid_link = metrics_data["Hybrid"]["Linkability (%)"]
+    col_metric1, col_metric2, col_metric3, col_metric4 = st.columns(4)
 
-with col_metric1:
-    st.markdown("### 🔴 Baseline")
-    st.metric(label="Tracking Success Rate", value=f"{base_succ:.1f}%")
-    st.metric(label="Linkability", value=f"{base_link:.1f}%")
+    base_succ = metrics_data["Baseline"]["Tracking Success Rate (%)"]
+    base_link = metrics_data["Baseline"]["Linkability (%)"]
+    naive_succ = metrics_data["Naive"]["Tracking Success Rate (%)"]
+    naive_link = metrics_data["Naive"]["Linkability (%)"]
+    smart_succ = metrics_data["Smart"]["Tracking Success Rate (%)"]
+    smart_link = metrics_data["Smart"]["Linkability (%)"]
+    hybrid_succ = metrics_data["Hybrid"]["Tracking Success Rate (%)"]
+    hybrid_link = metrics_data["Hybrid"]["Linkability (%)"]
 
-with col_metric2:
-    st.markdown("### 🟠 Naive")
-    st.metric(label="Tracking Success Rate", value=f"{naive_succ:.1f}%", delta=f"{naive_succ - base_succ:.1f}%", delta_color="inverse")
-    st.metric(label="Linkability", value=f"{naive_link:.1f}%", delta=f"{naive_link - base_link:.1f}%", delta_color="inverse")
+    with col_metric1:
+        st.markdown("### 🔴 Baseline")
+        st.metric(label="Tracking Success Rate", value=f"{base_succ:.1f}%")
+        st.metric(label="Linkability", value=f"{base_link:.1f}%")
 
-with col_metric3:
-    st.markdown("### 🟡 Smart Mitigation")
-    st.metric(label="Tracking Success Rate", value=f"{smart_succ:.1f}%", delta=f"{smart_succ - naive_succ:.1f}%", delta_color="inverse")
-    st.metric(label="Linkability", value=f"{smart_link:.1f}%", delta=f"{smart_link - naive_link:.1f}%", delta_color="inverse")
+    with col_metric2:
+        st.markdown("### 🟠 Naive")
+        st.metric(label="Tracking Success Rate", value=f"{naive_succ:.1f}%", delta=f"{naive_succ - base_succ:.1f}%", delta_color="inverse")
+        st.metric(label="Linkability", value=f"{naive_link:.1f}%", delta=f"{naive_link - base_link:.1f}%", delta_color="inverse")
 
-with col_metric4:
-    st.markdown("### 🟢 Hybrid Mitigation")
-    st.metric(label="Tracking Success Rate", value=f"{hybrid_succ:.1f}%", delta=f"{hybrid_succ - smart_succ:.1f}%", delta_color="inverse")
-    st.metric(label="Linkability", value=f"{hybrid_link:.1f}%", delta=f"{hybrid_link - smart_link:.1f}%", delta_color="inverse")
+    with col_metric3:
+        st.markdown("### 🟡 Smart Mitigation")
+        st.metric(label="Tracking Success Rate", value=f"{smart_succ:.1f}%", delta=f"{smart_succ - naive_succ:.1f}%", delta_color="inverse")
+        st.metric(label="Linkability", value=f"{smart_link:.1f}%", delta=f"{smart_link - naive_link:.1f}%", delta_color="inverse")
 
-# --- 4. Eye-Catching Visualizations ---
-st.subheader("Performance Comparison Chart")
+    with col_metric4:
+        st.markdown("### 🟢 Hybrid Mitigation")
+        st.metric(label="Tracking Success Rate", value=f"{hybrid_succ:.1f}%", delta=f"{hybrid_succ - smart_succ:.1f}%", delta_color="inverse")
+        st.metric(label="Linkability", value=f"{hybrid_link:.1f}%", delta=f"{hybrid_link - smart_link:.1f}%", delta_color="inverse")
 
-labels = ['Tracking Success Rate (%)', 'Linkability (%)']
+    # --- 4. Eye-Catching Visualizations ---
+    st.subheader("Performance Comparison Chart")
 
-baseline_values = [base_succ, base_link]
-naive_values = [naive_succ, naive_link]
-smart_values = [smart_succ, smart_link]
-hybrid_values = [hybrid_succ, hybrid_link]
+    labels = ['Tracking Success Rate (%)', 'Linkability (%)']
 
-x = np.arange(len(labels))
-width = 0.20 # Slimmer bars to fit 4 groups
+    baseline_values = [base_succ, base_link]
+    naive_values = [naive_succ, naive_link]
+    smart_values = [smart_succ, smart_link]
+    hybrid_values = [hybrid_succ, hybrid_link]
 
-fig, ax = plt.subplots(figsize=(12, 6))
-rects1 = ax.bar(x - 1.5*width, baseline_values, width, label='Baseline (No Mitigations)', color='#ffb3e6', edgecolor='black')
-rects2 = ax.bar(x - 0.5*width, naive_values, width, label='Scenario 2: Naive Approach', color='#ff9999', edgecolor='black')
-rects3 = ax.bar(x + 0.5*width, smart_values, width, label='Scenario 3: Smart Mitigation', color='#66b3ff', edgecolor='black')
-rects4 = ax.bar(x + 1.5*width, hybrid_values, width, label='Scenario 4: Hybrid Mitigation', color='#99ff99', edgecolor='black')
+    x = np.arange(len(labels))
+    width = 0.20 # Slimmer bars to fit 4 groups
 
-ax.set_ylabel('Percentage (%)')
-ax.set_title('Privacy Metrics Drop Across Scenarios', pad=20)
-ax.set_xticks(x)
-ax.set_xticklabels(labels)
-ax.set_ylim(0, 115)
-ax.legend()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    rects1 = ax.bar(x - 1.5*width, baseline_values, width, label='Baseline (No Mitigations)', color='#ffb3e6', edgecolor='black')
+    rects2 = ax.bar(x - 0.5*width, naive_values, width, label='Scenario 2: Naive Approach', color='#ff9999', edgecolor='black')
+    rects3 = ax.bar(x + 0.5*width, smart_values, width, label='Scenario 3: Smart Mitigation', color='#66b3ff', edgecolor='black')
+    rects4 = ax.bar(x + 1.5*width, hybrid_values, width, label='Scenario 4: Hybrid Mitigation', color='#99ff99', edgecolor='black')
 
-# Attach a text label above each bar
-def autolabel(rects):
-    for rect in rects:
-        height = rect.get_height()
-        ax.annotate(f'{height:.1f}%',
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
-                    ha='center', va='bottom', fontweight='bold', fontsize=9)
+    ax.set_ylabel('Percentage (%)')
+    ax.set_title('Privacy Metrics Drop Across Scenarios', pad=20)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylim(0, 115)
+    ax.legend()
 
-autolabel(rects1)
-autolabel(rects2)
-autolabel(rects3)
-autolabel(rects4)
+    # Attach a text label above each bar
+    def autolabel(rects):
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(f'{height:.1f}%',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontweight='bold', fontsize=9)
 
-plt.tight_layout()
-st.pyplot(fig)
+    autolabel(rects1)
+    autolabel(rects2)
+    autolabel(rects3)
+    autolabel(rects4)
 
-st.divider()
+    plt.tight_layout()
+    st.pyplot(fig)
 
-# --- 5. Insightful Summary ---
-st.info("""
-**Engineering Insights**
+    st.divider()
 
-**Interpreting the Results:**
-1. **The Baseline & Naive Failures:** Without mitigation, or with blind swaps, an attacker can easily track almost 100% of a vehicle's trajectory and link its digital identities.
-2. **V3 (Smart Mitigation) - The Digital Victory:** By waiting for density and using random silence, we successfully broke the digital identity chain (**0% Linkability**). However, because road networks constrain physical movement, the attacker could still physically estimate ~82% of the trajectory.
-3. **V4 (Hybrid Mitigation) - Attacking Physical Tracking:** By introducing the Cooperative Handshake and Velocity-Adaptive Silence, we force vehicles to swap and go silent as synchronized groups with dynamic durations. This further degraded the attacker's physical tracking success down to **~74.9%**.
+    # --- 5. Insightful Summary ---
+    st.info("""
+    **Engineering Insights**
 
-**The Takeaway:** While completely hiding physical movement on constrained roads is notoriously difficult without RSU infrastructure, the V4 Hybrid Mitigation proves that a purely decentralized, vehicle-to-vehicle algorithm can entirely defeat digital linking (0%) while degrading physical tracking by nearly 25%, establishing a robust privacy shield for connected vehicles.
-""")
+    **Interpreting the Results:**
+    1. **The Baseline & Naive Failures:** Without mitigation, or with blind swaps, an attacker can easily track almost 100% of a vehicle's trajectory and link its digital identities.
+    2. **V3 (Smart Mitigation) - The Digital Victory:** By waiting for density and using random silence, we successfully broke the digital identity chain (**0% Linkability**). However, because road networks constrain physical movement, the attacker could still physically estimate ~82% of the trajectory.
+    3. **V4 (Hybrid Mitigation) - Attacking Physical Tracking:** By introducing the Cooperative Handshake and Velocity-Adaptive Silence, we force vehicles to swap and go silent as synchronized groups with dynamic durations. This further degraded the attacker's physical tracking success down to **~74.9%**.
+
+    **The Takeaway:** While completely hiding physical movement on constrained roads is notoriously difficult without RSU infrastructure, the V4 Hybrid Mitigation proves that a purely decentralized, vehicle-to-vehicle algorithm can entirely defeat digital linking (0%) while degrading physical tracking by nearly 25%, establishing a robust privacy shield for connected vehicles.
+    """)
+
+with tab2:
+    st.header("Trajectory Analysis")
+    st.markdown("Visualizing a sample vehicle's true path versus the attacker's reconstructed track.")
+
+    traj_file = "results/trajectories.json"
+    if os.path.exists(traj_file):
+        with open(traj_file, "r") as f:
+            trajectories = json.load(f)
+
+        selected_scenario = st.selectbox("Select Scenario to Visualize:", ["Baseline", "Naive", "Smart", "Hybrid"])
+
+        data = trajectories.get(selected_scenario, {})
+        gt_path = data.get("ground_truth", [])
+        att_path = data.get("attacker_track", [])
+
+        if gt_path and att_path:
+            fig, ax = plt.subplots(figsize=(10, 8))
+
+            # Plot Ground Truth
+            gt_x = [p["x"] for p in gt_path]
+            gt_y = [p["y"] for p in gt_path]
+            ax.plot(gt_x, gt_y, color='blue', linewidth=3, alpha=0.6, label='Ground Truth (True Path)')
+
+            # Plot Attacker Track
+            att_x = [p["x"] for p in att_path]
+            att_y = [p["y"] for p in att_path]
+            ax.plot(att_x, att_y, color='red', linewidth=2, linestyle='--', marker='o', markersize=4, label='Attacker Reconstructed Track')
+
+            ax.set_title(f"Trajectory Overlay: {selected_scenario} Scenario", pad=15)
+            ax.set_xlabel("X Coordinate (m)")
+            ax.set_ylabel("Y Coordinate (m)")
+            ax.grid(True, linestyle=':', alpha=0.6)
+            ax.legend()
+
+            st.pyplot(fig)
+
+            if selected_scenario in ["Smart", "Hybrid"]:
+                st.success("Notice how the red dotted line (Attacker Track) breaks off or fails to follow the full blue line (Ground Truth)! This visually proves the mitigation strategy successfully starved the attacker's heuristic logic.")
+            else:
+                st.error("Notice how the red dotted line completely overlaps the blue line. The attacker successfully tracked the entire physical movement.")
+        else:
+            st.warning("No trajectory data found for this scenario. Please run the simulation first.")
+    else:
+        st.warning("Trajectory data not found. Please run `python runner.py` to generate `results/trajectories.json`.")
 
 st.markdown("""
 ---

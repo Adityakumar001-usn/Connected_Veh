@@ -14,8 +14,9 @@ sys.path.append(tools)
 
 import random
 import json
+import argparse
 
-def run_simulation(config_file, change_interval=None, smart_mitigation=False, hybrid_mitigation=False, end_time=1000):
+def run_simulation(config_file, change_interval=None, smart_mitigation=False, hybrid_mitigation=False, use_gui=False, verbose=False, end_time=1000):
     """
     Runs the SUMO simulation and feeds BSMs to the Attacker.
     change_interval: If None, baseline scenario (no pseudonym changes).
@@ -24,10 +25,11 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
     hybrid_mitigation: If True, uses cooperative swapping and velocity-adaptive silence.
     """
     # Start SUMO via TraCI
+    sumo_cmd = "sumo-gui" if use_gui else "sumo"
     # --no-step-log --no-warnings to keep output clean
-    traci.start(["sumo", "-c", config_file, "--no-step-log", "true", "--no-warnings", "true"])
+    traci.start([sumo_cmd, "-c", config_file, "--no-step-log", "true", "--no-warnings", "true"])
 
-    attacker = Attacker()
+    attacker = Attacker(verbose=verbose)
 
     # Trusted Backend System mapping: True ID -> Current Pseudonym
     trusted_backend = {}
@@ -53,6 +55,9 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
         active_vehicles = traci.vehicle.getIDList()
 
         for vehicle_id in active_vehicles:
+            # Default state color (Green)
+            color = (0, 255, 0, 255)
+
             # Initialize for new vehicles
             if vehicle_id not in trusted_backend:
                 pseudo = f"P_{pseudonym_counter}"
@@ -99,6 +104,10 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
                         if hybrid_mitigation and len(cooperative_group) == 0:
                             # Must swap with someone who ALSO needs a swap
                             should_change = False
+
+                    if vehicle_id in pending_changes:
+                        # Mix-Zone / Pending state color (Yellow)
+                        color = (255, 255, 0, 255)
 
                     if should_change:
                         # Process swap for the primary vehicle
@@ -149,6 +158,16 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
 
             # Broadcast BSM to Attacker (Attacker ONLY sees this if not in a silence period)
             is_silent = vehicle_id in silence_periods and step < silence_periods[vehicle_id]
+            if is_silent:
+                # Radio Silence state color (Red)
+                color = (255, 0, 0, 255)
+
+            # Apply color to the vehicle via TraCI
+            try:
+                traci.vehicle.setColor(vehicle_id, color)
+            except traci.exceptions.TraCIException:
+                pass # Safety catch in case vehicle departed mid-step
+
             if not is_silent:
                 attacker.process_bsm(current_pseudonym, x, y, speed, angle, step)
 
@@ -163,6 +182,11 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
     return attacker.reconstructed_routes, ground_truth
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="SUMO/TraCI Privacy Mitigation Simulation")
+    parser.add_argument("--gui", action="store_true", help="Run with sumo-gui for visual presentation")
+    parser.add_argument("--verbose", action="store_true", help="Print real-time attacker heuristic terminal logs")
+    args = parser.parse_args()
+
     # Ensure network exists
     print("Generating simulation environment...")
     net_file = generate_network()
@@ -170,16 +194,16 @@ if __name__ == "__main__":
     config_file = generate_sumo_config(net_file, route_file)
 
     print("\nRunning Scenario 1: Baseline (No Pseudonym Changes)...")
-    base_routes, base_ground_truth = run_simulation(config_file, change_interval=None, end_time=1000)
+    base_routes, base_ground_truth = run_simulation(config_file, change_interval=None, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("Running Scenario 2: Naive (Blind 3s Swaps)...")
-    naive_routes, naive_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=False, end_time=1000)
+    naive_routes, naive_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("Running Scenario 3: Smart Mitigation (Density + Random Silence)...")
-    smart_routes, smart_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=True, hybrid_mitigation=False, end_time=1000)
+    smart_routes, smart_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=True, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("Running Scenario 4: Hybrid Mitigation (Cooperative Swap + Adaptive Silence)...")
-    hybrid_routes, hybrid_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=True, end_time=1000)
+    hybrid_routes, hybrid_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=True, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("\nCalculating Metrics...")
     metrics_data = {
@@ -200,6 +224,57 @@ if __name__ == "__main__":
         json.dump(metrics_data, f, indent=4)
     print("\nMetrics saved to results/metrics.json for dashboard usage.")
 
-    # Generate the comparison chart (if you still want the legacy image generator)
-    generate_comparison_chart(metrics_data["Baseline"], metrics_data["Smart"])
+    # Select a sample vehicle that lived long enough to demonstrate trajectory breaking
+    # We will grab all trajectories for 'veh_0' (or the first available vehicle) across the 4 scenarios
+    sample_veh = None
+    for entry in base_ground_truth:
+        if entry["timestamp"] > 100:
+            sample_veh = entry["true_id"]
+            break
+    if sample_veh is None and len(base_ground_truth) > 0:
+        sample_veh = base_ground_truth[0]["true_id"]
+
+    trajectories_data = {}
+
+    def extract_trajectory(ground_truth, reconstructed_routes, sample_vid):
+        gt_path = []
+        for entry in ground_truth:
+            if entry["true_id"] == sample_vid:
+                gt_path.append({"x": entry["x"], "y": entry["y"]})
+
+        # Find the attacker track that covers the MOST steps of this vehicle
+        best_track_id = None
+        max_steps = 0
+        attacker_path = []
+
+        # Build reverse lookup to find which track IDs contain this vehicle's pseudonyms
+        # Since we just want a visual, we'll pick the track that maps to its initial pseudonym
+        initial_pseudo = None
+        for entry in ground_truth:
+            if entry["true_id"] == sample_vid:
+                initial_pseudo = entry["pseudonym"]
+                break
+
+        if initial_pseudo:
+            for tid, route in reconstructed_routes.items():
+                if any(bsm["pseudonym"] == initial_pseudo for bsm in route):
+                    best_track_id = tid
+                    break
+
+        if best_track_id and best_track_id in reconstructed_routes:
+            for bsm in reconstructed_routes[best_track_id]:
+                attacker_path.append({"x": bsm["x"], "y": bsm["y"]})
+
+        return {"ground_truth": gt_path, "attacker_track": attacker_path}
+
+    if sample_veh:
+        trajectories_data["Baseline"] = extract_trajectory(base_ground_truth, base_routes, sample_veh)
+        trajectories_data["Naive"] = extract_trajectory(naive_ground_truth, naive_routes, sample_veh)
+        trajectories_data["Smart"] = extract_trajectory(smart_ground_truth, smart_routes, sample_veh)
+        trajectories_data["Hybrid"] = extract_trajectory(hybrid_ground_truth, hybrid_routes, sample_veh)
+
+        with open("results/trajectories.json", "w") as f:
+            json.dump(trajectories_data, f, indent=4)
+        print("Trajectories saved to results/trajectories.json for dashboard mapping.")
+
     print("Simulation complete!")

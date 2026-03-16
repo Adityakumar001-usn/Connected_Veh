@@ -1,7 +1,9 @@
 import math
+import sys
 
 class Attacker:
-    def __init__(self):
+    def __init__(self, verbose=False):
+        self.verbose = verbose
         # A dictionary to store active tracks (the most recent BSM for a given pseudonym)
         # pseudonym -> {x, y, speed, angle, timestamp}
         self.active_tracks = {}
@@ -42,6 +44,14 @@ class Attacker:
             self.last_seen[pseudonym] = timestamp
             return
 
+        # Check for vanished tracks (disappeared in previous step but didn't reappear yet)
+        if self.verbose:
+            for old_pseudo, last_bsm in self.active_tracks.items():
+                if self.last_seen[old_pseudo] == timestamp - 1 and pseudonym not in self.active_tracks:
+                    # Note: We only print TRACK LOST if we are scanning for a completely new pseudonym
+                    # and the old one is missing. We will print it below.
+                    pass
+
         # If it's a new pseudonym (or reappeared after a long time), try to link it
         # to a recently disappeared pseudonym
         best_match_pseudonym = None
@@ -50,6 +60,8 @@ class Attacker:
         # Look for pseudonyms that disappeared in the previous step
         for old_pseudo, last_bsm in self.active_tracks.items():
             if self.last_seen[old_pseudo] == timestamp - 1:
+                if self.verbose:
+                    print(f"[ATTACKER] TRACK LOST: {old_pseudo} vanished. Scanning radius...", flush=True)
                 # Plausible distance check based on speed
                 # D = V * t (where t=1s since we check last step)
                 max_plausible_distance = last_bsm["speed"] * 1.5 + 10.0 # Add some buffer for acceleration/error
@@ -60,6 +72,9 @@ class Attacker:
                     best_match_pseudonym = old_pseudo
 
         if best_match_pseudonym is not None:
+            if self.verbose:
+                print(f"[ATTACKER] MATCH FOUND: Linked {best_match_pseudonym} to {pseudonym} based on spatial-temporal heuristic.", flush=True)
+
             # We found a match! Link the new pseudonym to the old track
             track_id = self.pseudonym_to_track_id[best_match_pseudonym]
 

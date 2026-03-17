@@ -190,7 +190,7 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
         # If running in GUI mode for a live presentation, artificially slow down the python loop
         # so the SUMO-GUI rendering engine has time to draw the frames and the human eye can watch.
         if use_gui:
-            time.sleep(0.05) # ~20 frames per second
+            time.sleep(0.01) # Faster simulation for presentation (~100 frames per second logic loop)
 
     traci.close()
 

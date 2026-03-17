@@ -46,11 +46,12 @@ class Attacker:
 
         # Check for vanished tracks (disappeared in previous step but didn't reappear yet)
         if self.verbose:
-            for old_pseudo, last_bsm in self.active_tracks.items():
-                if self.last_seen[old_pseudo] == timestamp - 1 and pseudonym not in self.active_tracks:
-                    # Note: We only print TRACK LOST if we are scanning for a completely new pseudonym
-                    # and the old one is missing. We will print it below.
-                    pass
+            # Only print vanished tracks once per simulation step to avoid console spam
+            if not hasattr(self, '_last_printed_vanish_step') or self._last_printed_vanish_step != timestamp:
+                self._last_printed_vanish_step = timestamp
+                for old_pseudo, last_bsm in self.active_tracks.items():
+                    if self.last_seen[old_pseudo] == timestamp - 1:
+                        print(f"[ATTACKER] TRACK LOST: {old_pseudo} vanished. Scanning radius...", flush=True)
 
         # If it's a new pseudonym (or reappeared after a long time), try to link it
         # to a recently disappeared pseudonym
@@ -60,8 +61,6 @@ class Attacker:
         # Look for pseudonyms that disappeared in the previous step
         for old_pseudo, last_bsm in self.active_tracks.items():
             if self.last_seen[old_pseudo] == timestamp - 1:
-                if self.verbose:
-                    print(f"[ATTACKER] TRACK LOST: {old_pseudo} vanished. Scanning radius...", flush=True)
                 # Plausible distance check based on speed
                 # D = V * t (where t=1s since we check last step)
                 max_plausible_distance = last_bsm["speed"] * 1.5 + 10.0 # Add some buffer for acceleration/error

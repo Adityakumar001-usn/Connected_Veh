@@ -17,7 +17,7 @@ import random
 import json
 import argparse
 
-def run_simulation(config_file, change_interval=None, smart_mitigation=False, hybrid_mitigation=False, use_gui=False, verbose=False, end_time=1000):
+def run_simulation(config_file, scenario_name, change_interval=None, smart_mitigation=False, hybrid_mitigation=False, use_gui=False, verbose=False, end_time=1000):
     """
     Runs the SUMO simulation and feeds BSMs to the Attacker.
     change_interval: If None, baseline scenario (no pseudonym changes).
@@ -38,6 +38,23 @@ def run_simulation(config_file, change_interval=None, smart_mitigation=False, hy
         traci_args.append("--quit-on-end")
 
     traci.start(traci_args)
+
+    # Add a visual POI label to indicate the current scenario in the GUI
+    if use_gui:
+        try:
+            # Place it near the center of the grid map (assuming 500x500 grid roughly)
+            traci.poi.add(
+                poiID="scenario_label",
+                x=250,
+                y=350,
+                color=(255, 255, 255, 255),
+                poiType=f"SCENARIO: {scenario_name}", # The Type field is often visible in default GUI settings
+                layer=100,
+                width=0,
+                height=0
+            )
+        except Exception as e:
+            pass # Ignore if POI addition fails
 
     attacker = Attacker(verbose=verbose)
 
@@ -210,16 +227,16 @@ if __name__ == "__main__":
     config_file = generate_sumo_config(net_file, route_file, gui_file)
 
     print("\nRunning Scenario 1: Baseline (No Pseudonym Changes)...")
-    base_routes, base_ground_truth = run_simulation(config_file, change_interval=None, use_gui=args.gui, verbose=args.verbose, end_time=1000)
+    base_routes, base_ground_truth = run_simulation(config_file, "BASELINE (No Privacy)", change_interval=None, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("Running Scenario 2: Naive (Blind 3s Swaps)...")
-    naive_routes, naive_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
+    naive_routes, naive_ground_truth = run_simulation(config_file, "NAIVE (Blind Swaps)", change_interval=3, smart_mitigation=False, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("Running Scenario 3: Smart Mitigation (Density + Random Silence)...")
-    smart_routes, smart_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=True, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
+    smart_routes, smart_ground_truth = run_simulation(config_file, "SMART (Density + Silence)", change_interval=3, smart_mitigation=True, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("Running Scenario 4: Hybrid Mitigation (Cooperative Swap + Adaptive Silence)...")
-    hybrid_routes, hybrid_ground_truth = run_simulation(config_file, change_interval=3, smart_mitigation=False, hybrid_mitigation=True, use_gui=args.gui, verbose=args.verbose, end_time=1000)
+    hybrid_routes, hybrid_ground_truth = run_simulation(config_file, "HYBRID (Cooperative + Adaptive Silence)", change_interval=3, smart_mitigation=False, hybrid_mitigation=True, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
     print("\nCalculating Metrics...")
     metrics_data = {

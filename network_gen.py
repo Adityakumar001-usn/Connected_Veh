@@ -52,10 +52,12 @@ def generate_gui_settings(output_dir="net", settings_name="gui-settings.xml"):
 
     # Create a GUI settings file that significantly exaggerates vehicle sizes
     # so their colors (Green, Yellow, Red) are easily visible during a live presentation.
+    # It also enables POI (Points of Interest) text to be visible so we can show scenario labels.
     settings_content = """<?xml version="1.0" encoding="UTF-8"?>
 <viewsettings>
     <scheme name="real world"/>
-    <vehicles vehicleName_show="0" vehicle_exaggeration="5.0" vehicleQuality="3" vehicle_minSize="10.0"/>
+    <vehicles vehicleName_show="0" vehicle_exaggeration="6.0" vehicleQuality="3" vehicle_minSize="15.0"/>
+    <pois poiText_show="1" poiTextSize="100" poiName_show="1" poiNameSize="100"/>
 </viewsettings>
 """
     with open(settings_file, "w") as f:

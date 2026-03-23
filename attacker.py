@@ -2,10 +2,19 @@ import math
 import sys
 
 class Attacker:
+    """
+    The Attacker class simulates an unauthorized observer (e.g., a hacker listening to radio frequencies)
+    who is passively collecting Basic Safety Messages (BSMs) broadcasted by vehicles.
+
+    The attacker's goal is to link temporary pseudonyms together over time. If a vehicle
+    changes its name from 'P_1' to 'P_99', the attacker uses physics (location, speed, time)
+    to figure out that 'P_99' is actually just 'P_1' in disguise, thereby reconstructing
+    the vehicle's complete travel history.
+    """
     def __init__(self, verbose=False):
         self.verbose = verbose
-        # A dictionary to store active tracks (the most recent BSM for a given pseudonym)
-        # pseudonym -> {x, y, speed, angle, timestamp}
+        # Stores the most recently received BSM for each currently active pseudonym.
+        # Format: pseudonym -> {x, y, speed, angle, timestamp}
         self.active_tracks = {}
 
         # A dictionary mapping each tracked path ID to a list of its BSMs

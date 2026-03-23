@@ -47,14 +47,20 @@ def generate_routes(net_file, output_dir="net", num_vehicles=100, end_time=1000)
     return route_file
 
 def generate_gui_settings(output_dir="net", settings_name="gui-settings.xml"):
+    """
+    Creates the visual configuration for the SUMO-GUI.
+    We exaggerate vehicle sizes so their privacy state colors (Green/Yellow/Red)
+    are immediately obvious to the audience during a live presentation.
+    We also enable POI text visibility to display our custom on-screen display (OSD) labels.
+    """
     os.makedirs(output_dir, exist_ok=True)
     settings_file = os.path.join(output_dir, settings_name)
 
-    # Create a GUI settings file that significantly exaggerates vehicle sizes
-    # so their colors (Green, Yellow, Red) are easily visible during a live presentation.
-    # It also enables POI (Points of Interest) text to be visible so we can show scenario labels.
+    # <viewport zoom="150" x="250" y="250"/> ensures the camera is perfectly centered on our 5x5 map when the simulation starts.
+    # <pois ... /> enables the display of our custom Scenario Name, Reasoning, and Legend text boxes.
     settings_content = """<?xml version="1.0" encoding="UTF-8"?>
 <viewsettings>
+    <viewport zoom="150" x="250" y="250"/>
     <scheme name="real world"/>
     <vehicles vehicleName_show="0" vehicle_exaggeration="6.0" vehicleQuality="3" vehicle_minSize="15.0"/>
     <pois poiText_show="1" poiTextSize="100" poiName_show="1" poiNameSize="100"/>

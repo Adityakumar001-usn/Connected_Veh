@@ -64,12 +64,14 @@ def generate_gui_settings(output_dir="net", settings_name="gui-settings.xml"):
 
     # <viewport zoom="150" x="250" y="250"/> ensures the camera is perfectly centered on our 5x5 map when the simulation starts.
     # <pois ... /> enables the display of our custom Scenario Name, Reasoning, and Legend text boxes.
+    # Note: poiType_show must be 1 to show the 'type' field which we use for our long text strings.
+    # Text size is reduced from 100 to 24 to ensure it actually fits on smaller laptop screens without clipping.
     settings_content = """<?xml version="1.0" encoding="UTF-8"?>
 <viewsettings>
     <viewport zoom="150" x="250" y="250"/>
     <scheme name="real world"/>
     <vehicles vehicleName_show="0" vehicle_exaggeration="6.0" vehicleQuality="3" vehicle_minSize="15.0"/>
-    <pois poiText_show="1" poiTextSize="100" poiName_show="1" poiNameSize="100"/>
+    <pois poiText_show="1" poiTextSize="24" poiName_show="1" poiNameSize="24" poiType_show="1" poiTypeSize="24"/>
 </viewsettings>
 """
     with open(settings_file, "w") as f:

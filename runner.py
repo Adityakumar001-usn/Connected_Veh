@@ -47,18 +47,20 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
     # --- BUILD THE ON-SCREEN DISPLAY (OSD) FOR THE GUI ---
     # We use TraCI "Points of Interest" (POIs) to render floating text on the map.
     # This acts as an automated presentation slide so the audience understands the current visual.
+    # Note: X/Y values must be safely inside the 500x500 grid bounding box so they are always visible!
     if use_gui:
         try:
-            # 1. Main Title (Scenario Name) - Placed near the top center
-            traci.poi.add(poiID="osd_title", x=250, y=480, color=(255, 255, 255, 255), poiType=f"==== {scenario_name} ====", layer=100, width=0, height=0)
+            # 1. Main Title (Scenario Name) - Placed near the top center inside the grid
+            # Changed color to Black (0,0,0) so it is visible against the default white background of sumo-gui.
+            traci.poi.add(poiID="osd_title", x=250, y=450, color=(0, 0, 0, 255), poiType=f"==== {scenario_name} ====", layer=100, width=0, height=0)
 
             # 2. Reasoning / Description - Placed right below the title
-            traci.poi.add(poiID="osd_reason", x=250, y=450, color=(200, 200, 200, 255), poiType=f"Logic: {reasoning}", layer=100, width=0, height=0)
+            traci.poi.add(poiID="osd_reason", x=250, y=420, color=(50, 50, 50, 255), poiType=f"Logic: {reasoning}", layer=100, width=0, height=0)
 
-            # 3. Visual Legend - Placed near the bottom center
-            traci.poi.add(poiID="osd_legend_green", x=250, y=-20, color=(0, 255, 0, 255), poiType="GREEN = Normal Broadcast", layer=100, width=0, height=0)
-            traci.poi.add(poiID="osd_legend_yellow", x=250, y=-50, color=(255, 255, 0, 255), poiType="YELLOW = Seeking Mix-Zone (Pending Swap)", layer=100, width=0, height=0)
-            traci.poi.add(poiID="osd_legend_red", x=250, y=-80, color=(255, 0, 0, 255), poiType="RED = Radio Silence (Evasion Active)", layer=100, width=0, height=0)
+            # 3. Visual Legend - Placed near the bottom center, safely inside the grid boundaries
+            traci.poi.add(poiID="osd_legend_green", x=250, y=80, color=(0, 255, 0, 255), poiType="GREEN = Normal Broadcast", layer=100, width=0, height=0)
+            traci.poi.add(poiID="osd_legend_yellow", x=250, y=50, color=(255, 255, 0, 255), poiType="YELLOW = Seeking Mix-Zone (Pending Swap)", layer=100, width=0, height=0)
+            traci.poi.add(poiID="osd_legend_red", x=250, y=20, color=(255, 0, 0, 255), poiType="RED = Radio Silence (Evasion Active)", layer=100, width=0, height=0)
         except Exception as e:
             pass # Ignore if POI addition fails (e.g., if TraCI connection dropped)
 
@@ -223,41 +225,58 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SUMO/TraCI Privacy Mitigation Simulation")
     parser.add_argument("--gui", action="store_true", help="Run with sumo-gui for visual presentation")
     parser.add_argument("--verbose", action="store_true", help="Print real-time attacker heuristic terminal logs")
+    parser.add_argument("--random", action="store_true", help="Inject true randomness so privacy metrics dynamically fluctuate on every run")
     args = parser.parse_args()
 
     # Ensure network exists
     print("Generating simulation environment...")
     net_file = generate_network()
-    # Setting random_seed=True guarantees that the routes, spawn times, and vehicle
-    # interactions will be COMPLETELY different every single time you run the script.
-    # This proves to the audience that the simulation is dynamically calculating the
-    # Tracking Success Rate rather than reading hardcoded percentage values.
-    route_file = generate_routes(net_file, num_vehicles=200, end_time=1000, random_seed=True)
-    gui_file = generate_gui_settings()
-    config_file = generate_sumo_config(net_file, route_file, gui_file, random_seed=True)
 
-    print("\nRunning Scenario 1: Baseline (No Pseudonym Changes)...")
+    if args.random:
+        print("🎲 True Randomness Enabled: Traffic routes and physics will be dynamically generated.")
+    else:
+        print("🔒 Deterministic Mode: Traffic routes and physics use a fixed seed for reproducible metrics (~75% Hybrid Tracking Success).")
+
+    # Generate routes and config based on the --random flag.
+    # If deterministic (False), it guarantees the dense traffic pattern needed for the Cooperative (Hybrid) mitigation to function ideally.
+    route_file = generate_routes(net_file, num_vehicles=200, end_time=1000, random_seed=args.random)
+    gui_file = generate_gui_settings()
+    config_file = generate_sumo_config(net_file, route_file, gui_file, random_seed=args.random)
+
+    print("\n" + "="*70)
+    print("🏁 RUNNING SCENARIO 1: BASELINE (NO PRIVACY)")
+    print("Logic: Static Identifiers. The attacker trivially links identifiers forever.")
+    print("="*70)
     base_routes, base_ground_truth = run_simulation(
         config_file,
         scenario_name="BASELINE (No Privacy)",
         reasoning="Static Identifiers. The attacker can easily track 100% of vehicles indefinitely.",
         change_interval=None, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
-    print("Running Scenario 2: Naive (Blind 3s Swaps)...")
+    print("\n" + "="*70)
+    print("🏃 RUNNING SCENARIO 2: NAIVE (BLIND 3s SWAPS)")
+    print("Logic: Swap every 3s. Physics don't change fast enough; attacker trivially links new IDs.")
+    print("="*70)
     naive_routes, naive_ground_truth = run_simulation(
         config_file,
         scenario_name="NAIVE (Blind Swaps)",
         reasoning="Swap every 3s. Location/Speed barely changes in 3s, so the attacker trivially links the new ID.",
         change_interval=3, smart_mitigation=False, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
-    print("Running Scenario 3: Smart Mitigation (Density + Random Silence)...")
+    print("\n" + "="*70)
+    print("🧠 RUNNING SCENARIO 3: SMART MITIGATION (DENSITY + SILENCE)")
+    print("Logic: Swap ONLY near other cars (Mix-Zones) + Radio Silence (3-6s) to break tracking radius.")
+    print("="*70)
     smart_routes, smart_ground_truth = run_simulation(
         config_file,
         scenario_name="SMART (Density + Silence)",
         reasoning="Swap ONLY near other cars (Mix-Zones) + Stop broadcasting for 3-6s to break the tracking radius.",
         change_interval=3, smart_mitigation=True, hybrid_mitigation=False, use_gui=args.gui, verbose=args.verbose, end_time=1000)
 
-    print("Running Scenario 4: Hybrid Mitigation (Cooperative Swap + Adaptive Silence)...")
+    print("\n" + "="*70)
+    print("🛡️ RUNNING SCENARIO 4: HYBRID MITIGATION (COOPERATIVE + VELOCITY SILENCE)")
+    print("Logic: Form groups to swap IDs synchronously. Faster cars need less radio silence to escape.")
+    print("="*70)
     hybrid_routes, hybrid_ground_truth = run_simulation(
         config_file,
         scenario_name="HYBRID (Cooperative + Velocity Silence)",

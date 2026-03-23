@@ -36,7 +36,7 @@ When running the simulation with the `--gui` flag, you can watch the mitigations
 
 A large **On-Screen Display (OSD)** will appear overlaid on the map during the presentation. This OSD dynamically updates to show the audience the current Scenario Name, a "Logic" prompt justifying the privacy behavior, and a color legend.
 
-> **💡 Note on Metric Fluctuation:** The simulation is injected with true randomness. Every time you run the script, SUMO generates completely new traffic routes, spawning times, and vehicle interactions. Therefore, your final privacy metrics (Tracking Success Rate %) will dynamically fluctuate on every execution, proving to your audience that the math is being calculated in real-time rather than reading hardcoded values!
+> **💡 Note on Metric Fluctuation:** By default, the simulation uses true randomness. Every time you run the script, SUMO generates completely new traffic routes, spawning times, and vehicle interactions. Therefore, your final privacy metrics (Tracking Success Rate %) will dynamically fluctuate on every execution, proving to your audience that the math is being calculated in real-time rather than reading hardcoded values!
 
 ---
 
@@ -63,6 +63,7 @@ python3 runner.py --gui
 ```
 
 *(Optional)* To see the attacker's real-time heuristic logs flooding the terminal, append the `--verbose` flag.
+*(Optional)* If you need fully reproducible and static metrics (for example, to take consistent screenshots), append the `--static` flag to disable true randomness.
 
 ### 3. View the Results Dashboard
 

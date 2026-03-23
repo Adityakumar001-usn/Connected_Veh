@@ -125,7 +125,12 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
                                 # Fast bounding box check
                                 if abs(ox - x) <= 50.0 and abs(oy - y) <= 50.0:
                                     dist = ((ox - x)**2 + (oy - y)**2)**0.5
-                                    if dist <= 50.0:
+                                    # HYBRID BOOST: Increase the "search radius" for cooperative swaps to 100m.
+                                    # This ensures vehicles find partners much faster, preventing them from lingering
+                                    # in the vulnerable "Yellow" state broadcasting their old trackable pseudonyms.
+                                    check_radius = 100.0 if hybrid_mitigation else 50.0
+
+                                    if dist <= check_radius:
                                         nearby_vehicles += 1
                                         if hybrid_mitigation and other_id in pending_changes:
                                             cooperative_group.append(other_id)
@@ -136,8 +141,11 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
                         if nearby_vehicles < 2:
                             should_change = False
 
-                        if hybrid_mitigation and len(cooperative_group) == 0:
-                            # Must swap with someone who ALSO needs a swap
+                        # HYBRID OPTIMIZATION: If the vehicle cannot find another car that ALSO needs to swap,
+                        # allow it to swap anyway if it is surrounded by at least 2 normal vehicles (hiding in a dense crowd).
+                        # This further lowers tracing success by getting cars out of the trackable Yellow state instantly.
+                        if hybrid_mitigation and len(cooperative_group) == 0 and nearby_vehicles < 2:
+                            # Must swap with a partner OR be in a dense crowd of 2+ cars
                             should_change = False
 
                     if vehicle_id in pending_changes:
@@ -150,11 +158,15 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
                         pseudonym_counter += 1
                         trusted_backend[vehicle_id] = pseudo
                         last_change_time[vehicle_id] = step
-                        pending_changes.remove(vehicle_id)
+                        if vehicle_id in pending_changes:
+                            pending_changes.remove(vehicle_id)
 
                         if hybrid_mitigation:
                             # V4: Adaptive silence based on the primary vehicle's physics.
-                            silence_duration = max(3.0, min(10.0, 100.0 / max(0.1, speed)))
+                            # HYBRID BOOST: Slower cars can now go silent for up to 50 seconds!
+                            # Since the grid is dense and cars move slowly, extended silence is strictly required
+                            # to mathematically escape the Attacker's wide predictive search bounds.
+                            silence_duration = max(15.0, min(50.0, 500.0 / max(0.1, speed)))
                             # Convert to integer steps
                             silence_duration = int(silence_duration)
                             silence_periods[vehicle_id] = step + silence_duration
@@ -174,7 +186,7 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
 
                                 # V4 Adaptive Silence: Use the neighbor's own physics to calculate silence!
                                 n_speed = traci.vehicle.getSpeed(neighbor_id)
-                                n_silence = max(3.0, min(10.0, 100.0 / max(0.1, n_speed)))
+                                n_silence = max(15.0, min(50.0, 500.0 / max(0.1, n_speed)))
                                 silence_periods[neighbor_id] = step + int(n_silence)
 
             # Get current pseudonym

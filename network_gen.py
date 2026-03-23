@@ -21,7 +21,7 @@ def generate_network(output_dir="net"):
     print(f"Network generated at {net_file}")
     return net_file
 
-def generate_routes(net_file, output_dir="net", num_vehicles=100, end_time=1000):
+def generate_routes(net_file, output_dir="net", num_vehicles=100, end_time=1000, random_seed=True):
     os.makedirs(output_dir, exist_ok=True)
     route_file = os.path.join(output_dir, "routes.rou.xml")
 
@@ -41,6 +41,12 @@ def generate_routes(net_file, output_dir="net", num_vehicles=100, end_time=1000)
         "-e", str(end_time),
         "-p", str(end_time / num_vehicles) # Period to achieve num_vehicles by end_time
     ]
+
+    if random_seed:
+        # Inject true randomness by passing a random seed to the generator.
+        # This ensures the traffic patterns change on EVERY run of the presentation,
+        # which means the final privacy metric percentages will dynamically fluctuate!
+        cmd.extend(["--seed", str(random.randint(1, 99999))])
 
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(f"Routes generated at {route_file}")
@@ -72,7 +78,7 @@ def generate_gui_settings(output_dir="net", settings_name="gui-settings.xml"):
     print(f"GUI settings generated at {settings_file}")
     return settings_file
 
-def generate_sumo_config(net_file, route_file, gui_settings_file, output_dir="net", config_name="sim.sumocfg"):
+def generate_sumo_config(net_file, route_file, gui_settings_file, output_dir="net", config_name="sim.sumocfg", random_seed=True):
     os.makedirs(output_dir, exist_ok=True)
     config_file = os.path.join(output_dir, config_name)
 
@@ -80,6 +86,11 @@ def generate_sumo_config(net_file, route_file, gui_settings_file, output_dir="ne
     net_name = os.path.basename(net_file)
     route_name = os.path.basename(route_file)
     settings_name = os.path.basename(gui_settings_file)
+
+    # Insert random physics flag if requested
+    # <seed value="<random_int>"/> tells the SUMO physics engine to use true randomness.
+    # Note: SUMO requires 'seed' to be an integer, not the string 'random'.
+    random_block = f'        <seed value="{random.randint(1, 99999)}"/>' if random_seed else ''
 
     config_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
@@ -96,6 +107,7 @@ def generate_sumo_config(net_file, route_file, gui_settings_file, output_dir="ne
     </time>
     <processing>
         <time-to-teleport value="-1"/>
+{random_block}
     </processing>
 </configuration>
 """

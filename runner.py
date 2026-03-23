@@ -228,9 +228,13 @@ if __name__ == "__main__":
     # Ensure network exists
     print("Generating simulation environment...")
     net_file = generate_network()
-    route_file = generate_routes(net_file, num_vehicles=200, end_time=1000)
+    # Setting random_seed=True guarantees that the routes, spawn times, and vehicle
+    # interactions will be COMPLETELY different every single time you run the script.
+    # This proves to the audience that the simulation is dynamically calculating the
+    # Tracking Success Rate rather than reading hardcoded percentage values.
+    route_file = generate_routes(net_file, num_vehicles=200, end_time=1000, random_seed=True)
     gui_file = generate_gui_settings()
-    config_file = generate_sumo_config(net_file, route_file, gui_file)
+    config_file = generate_sumo_config(net_file, route_file, gui_file, random_seed=True)
 
     print("\nRunning Scenario 1: Baseline (No Pseudonym Changes)...")
     base_routes, base_ground_truth = run_simulation(

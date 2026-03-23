@@ -34,7 +34,9 @@ When running the simulation with the `--gui` flag, you can watch the mitigations
 *   🟡 **Yellow (Pending Swap):** The vehicle is attempting to swap its pseudonym but is waiting for a dense "Mix-Zone" or a cooperative group to form.
 *   🔴 **Red (Radio Silence):** The vehicle has successfully swapped its pseudonym and has temporarily **disabled its BSM broadcasts** to evade the attacker's tracking radius.
 
-A large text label will also appear in the center of the map indicating which scenario is currently running.
+A large **On-Screen Display (OSD)** will appear overlaid on the map during the presentation. This OSD dynamically updates to show the audience the current Scenario Name, a "Logic" prompt justifying the privacy behavior, and a color legend.
+
+> **💡 Note on Metric Fluctuation:** The simulation is injected with true randomness. Every time you run the script, SUMO generates completely new traffic routes, spawning times, and vehicle interactions. Therefore, your final privacy metrics (Tracking Success Rate %) will dynamically fluctuate on every execution, proving to your audience that the math is being calculated in real-time rather than reading hardcoded values!
 
 ---
 

@@ -122,13 +122,13 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
                         for other_id in active_vehicles:
                             if other_id != vehicle_id:
                                 ox, oy = traci.vehicle.getPosition(other_id)
+                                check_radius = 250.0 if hybrid_mitigation else 50.0
                                 # Fast bounding box check
-                                if abs(ox - x) <= 50.0 and abs(oy - y) <= 50.0:
+                                if abs(ox - x) <= check_radius and abs(oy - y) <= check_radius:
                                     dist = ((ox - x)**2 + (oy - y)**2)**0.5
                                     # HYBRID BOOST: Increase the "search radius" for cooperative swaps to 250m!
                                     # This effectively allows vehicles to form cooperative groups almost anywhere on the map,
                                     # ensuring they spend ZERO time lingering in the vulnerable "Yellow" state broadcasting their old IDs.
-                                    check_radius = 250.0 if hybrid_mitigation else 50.0
 
                                     if dist <= check_radius:
                                         nearby_vehicles += 1

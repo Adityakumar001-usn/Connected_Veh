@@ -184,7 +184,54 @@ with tab1:
 
     st.divider()
 
-    # --- 5. Insightful Summary ---
+    # --- 5. Visualizing the Broken Trajectories (Blue vs Red Lines) ---
+    st.header("Trajectory Analysis")
+    st.markdown("The charts below plot a sample vehicle's **Ground Truth Path (Solid Blue)** against the **Attacker's Track (Dotted Red)**. Notice how the advanced mitigations completely break the red line!")
+
+    traj_file = "results/trajectories.json"
+    if os.path.exists(traj_file):
+        with open(traj_file, "r") as f:
+            trajectories = json.load(f)
+
+        # Display the 4 scenarios in a 2x2 grid for immediate visual comparison
+        plot_col1, plot_col2 = st.columns(2)
+        plot_col3, plot_col4 = st.columns(2)
+        columns_layout = {"Baseline": plot_col1, "Naive": plot_col2, "Smart": plot_col3, "Hybrid": plot_col4}
+
+        for scenario_name, target_col in columns_layout.items():
+            data = trajectories.get(scenario_name, {})
+            gt_path = data.get("ground_truth", [])
+            att_path = data.get("attacker_track", [])
+
+            with target_col:
+                if gt_path and att_path:
+                    fig, ax = plt.subplots(figsize=(6, 5))
+
+                    # Plot Ground Truth
+                    gt_x = [p["x"] for p in gt_path]
+                    gt_y = [p["y"] for p in gt_path]
+                    ax.plot(gt_x, gt_y, color='blue', linewidth=3, alpha=0.6, label='Ground Truth')
+
+                    # Plot Attacker Track
+                    att_x = [p["x"] for p in att_path]
+                    att_y = [p["y"] for p in att_path]
+                    ax.plot(att_x, att_y, color='red', linewidth=2, linestyle='--', marker='o', markersize=3, label='Attacker Track')
+
+                    ax.set_title(f"{scenario_name} Trajectory", pad=10)
+                    ax.set_xlabel("X (m)")
+                    ax.set_ylabel("Y (m)")
+                    ax.grid(True, linestyle=':', alpha=0.6)
+                    ax.legend()
+
+                    st.pyplot(fig)
+                else:
+                    st.warning(f"No trajectory data for {scenario_name}.")
+    else:
+        st.warning("Trajectory data not found. Please run `python runner.py` to generate `results/trajectories.json`.")
+
+    st.divider()
+
+    # --- 6. Insightful Summary ---
     st.info(f"""
     **Engineering Insights**
 
@@ -197,55 +244,18 @@ with tab1:
     """)
 
 with tab2:
-    st.header("Trajectory Analysis")
-    st.markdown("Visualizing a sample vehicle's true path versus the attacker's reconstructed track.")
+    st.header("Technical Notes")
+    st.markdown("""
+    - **Simulation Stack**: Python 3, TraCI API, SUMO Engine.
+    - **Attacker Heuristic Algorithm**: `Distance <= Speed * 1.5 + 10.0`
+    - **Bounding Box Optimization**: O(N) spatial hashing check utilized prior to Euclidean distance checks to allow real-time density calculations.
 
-    traj_file = "results/trajectories.json"
-    if os.path.exists(traj_file):
-        with open(traj_file, "r") as f:
-            trajectories = json.load(f)
+    ### How to run the local simulation engine:
+    ```bash
+    # Generate new random traffic and evaluate mitigations
+    python runner.py
 
-        selected_scenario = st.selectbox("Select Scenario to Visualize:", ["Baseline", "Naive", "Smart", "Hybrid"])
-
-        data = trajectories.get(selected_scenario, {})
-        gt_path = data.get("ground_truth", [])
-        att_path = data.get("attacker_track", [])
-
-        if gt_path and att_path:
-            fig, ax = plt.subplots(figsize=(10, 8))
-
-            # Plot Ground Truth
-            gt_x = [p["x"] for p in gt_path]
-            gt_y = [p["y"] for p in gt_path]
-            ax.plot(gt_x, gt_y, color='blue', linewidth=3, alpha=0.6, label='Ground Truth (True Path)')
-
-            # Plot Attacker Track
-            att_x = [p["x"] for p in att_path]
-            att_y = [p["y"] for p in att_path]
-            ax.plot(att_x, att_y, color='red', linewidth=2, linestyle='--', marker='o', markersize=4, label='Attacker Reconstructed Track')
-
-            ax.set_title(f"Trajectory Overlay: {selected_scenario} Scenario", pad=15)
-            ax.set_xlabel("X Coordinate (m)")
-            ax.set_ylabel("Y Coordinate (m)")
-            ax.grid(True, linestyle=':', alpha=0.6)
-            ax.legend()
-
-            st.pyplot(fig)
-
-            if selected_scenario in ["Smart", "Hybrid"]:
-                st.success("Notice how the red dotted line (Attacker Track) breaks off or fails to follow the full blue line (Ground Truth)! This visually proves the mitigation strategy successfully starved the attacker's heuristic logic.")
-            else:
-                st.error("Notice how the red dotted line completely overlaps the blue line. The attacker successfully tracked the entire physical movement.")
-        else:
-            st.warning("No trajectory data found for this scenario. Please run the simulation first.")
-    else:
-        st.warning("Trajectory data not found. Please run `python runner.py` to generate `results/trajectories.json`.")
-
-st.markdown("""
----
-**To run this dashboard locally:**
-```bash
-pip install streamlit
-streamlit run dashboard.py
-```
-""")
+    # Run the interactive dashboard
+    streamlit run dashboard.py
+    ```
+    """)

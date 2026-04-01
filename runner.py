@@ -36,6 +36,23 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
     # Base arguments: --no-step-log --no-warnings to keep terminal output clean during presentations
     traci_args = [sumo_cmd, "-c", config_file, "--no-step-log", "true", "--no-warnings", "true"]
 
+    # --- BUILD THE ON-SCREEN DISPLAY (OSD) FOR THE GUI ---
+    # We use an Additional XML file containing "Points of Interest" (POIs) to render floating text on the map.
+    # This acts as an automated presentation slide so the audience understands the current visual.
+    # Note: X/Y values must be safely inside the 500x500 grid bounding box so they are always visible!
+    osd_file = "net/osd.add.xml"
+    if use_gui:
+        with open(osd_file, "w") as f:
+            f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+    <poi id="osd_title" x="250" y="450" color="black" name="==== {scenario_name} ====" type="==== {scenario_name} ====" layer="100"/>
+    <poi id="osd_reason" x="250" y="420" color="50,50,50" name="Logic: {reasoning}" type="Logic: {reasoning}" layer="100"/>
+    <poi id="osd_legend_green" x="250" y="80" color="green" name="GREEN = Normal Broadcast" type="GREEN = Normal Broadcast" layer="100"/>
+    <poi id="osd_legend_yellow" x="250" y="50" color="yellow" name="YELLOW = Seeking Mix-Zone (Pending Swap)" type="YELLOW = Seeking Mix-Zone (Pending Swap)" layer="100"/>
+    <poi id="osd_legend_red" x="250" y="20" color="red" name="RED = Radio Silence (Evasion Active)" type="RED = Radio Silence (Evasion Active)" layer="100"/>
+</additional>""")
+        traci_args.extend(["-a", osd_file])
+
     # If using GUI, force it to automatically press "Play" so it doesn't pause at step 0 waiting for user input.
     # Also force it to automatically quit when finished.
     if use_gui:
@@ -43,26 +60,6 @@ def run_simulation(config_file, scenario_name, reasoning, change_interval=None, 
         traci_args.append("--quit-on-end")
 
     traci.start(traci_args)
-
-    # --- BUILD THE ON-SCREEN DISPLAY (OSD) FOR THE GUI ---
-    # We use TraCI "Points of Interest" (POIs) to render floating text on the map.
-    # This acts as an automated presentation slide so the audience understands the current visual.
-    # Note: X/Y values must be safely inside the 500x500 grid bounding box so they are always visible!
-    if use_gui:
-        try:
-            # 1. Main Title (Scenario Name) - Placed near the top center inside the grid
-            # Changed color to Black (0,0,0) so it is visible against the default white background of sumo-gui.
-            traci.poi.add(poiID="osd_title", x=250, y=450, color=(0, 0, 0, 255), poiType=f"==== {scenario_name} ====", layer=100, width=0, height=0)
-
-            # 2. Reasoning / Description - Placed right below the title
-            traci.poi.add(poiID="osd_reason", x=250, y=420, color=(50, 50, 50, 255), poiType=f"Logic: {reasoning}", layer=100, width=0, height=0)
-
-            # 3. Visual Legend - Placed near the bottom center, safely inside the grid boundaries
-            traci.poi.add(poiID="osd_legend_green", x=250, y=80, color=(0, 255, 0, 255), poiType="GREEN = Normal Broadcast", layer=100, width=0, height=0)
-            traci.poi.add(poiID="osd_legend_yellow", x=250, y=50, color=(255, 255, 0, 255), poiType="YELLOW = Seeking Mix-Zone (Pending Swap)", layer=100, width=0, height=0)
-            traci.poi.add(poiID="osd_legend_red", x=250, y=20, color=(255, 0, 0, 255), poiType="RED = Radio Silence (Evasion Active)", layer=100, width=0, height=0)
-        except Exception as e:
-            pass # Ignore if POI addition fails (e.g., if TraCI connection dropped)
 
     attacker = Attacker(verbose=verbose)
 

@@ -185,15 +185,15 @@ with tab1:
     st.divider()
 
     # --- 5. Insightful Summary ---
-    st.info("""
+    st.info(f"""
     **Engineering Insights**
 
     **Interpreting the Results:**
-    1. **The Baseline & Naive Failures:** Without mitigation, or with blind swaps, an attacker can easily track almost 100% of a vehicle's trajectory and link its digital identities.
-    2. **V3 (Smart Mitigation) - The Digital Victory:** By waiting for density and using random silence, we successfully broke the digital identity chain (**0% Linkability**). However, because road networks constrain physical movement, the attacker could still physically estimate ~82% of the trajectory.
-    3. **V4 (Hybrid Mitigation) - Attacking Physical Tracking:** By introducing the Cooperative Handshake and Velocity-Adaptive Silence, we force vehicles to swap and go silent as synchronized groups with dynamic durations. This further degraded the attacker's physical tracking success down to **~74.9%**.
+    1. **The Baseline & Naive Failures:** Without mitigation, or with blind swaps, an attacker can easily track almost {base_succ:.1f}% of a vehicle's trajectory and link its digital identities.
+    2. **V3 (Smart Mitigation) - The Digital Victory:** By waiting for density and using random silence, we successfully broke the digital identity chain (**{smart_link:.1f}% Linkability**). However, because road networks constrain physical movement, the attacker could still physically estimate ~{smart_succ:.1f}% of the trajectory.
+    3. **V4 (Hybrid Mitigation) - Attacking Physical Tracking:** By introducing the Cooperative Handshake and Velocity-Adaptive Silence, we force vehicles to swap and go silent as synchronized groups with dynamic durations. This further degraded the attacker's physical tracking success down to **~{hybrid_succ:.1f}%**.
 
-    **The Takeaway:** While completely hiding physical movement on constrained roads is notoriously difficult without RSU infrastructure, the V4 Hybrid Mitigation proves that a purely decentralized, vehicle-to-vehicle algorithm can entirely defeat digital linking (0%) while degrading physical tracking by nearly 25%, establishing a robust privacy shield for connected vehicles.
+    **The Takeaway:** While completely hiding physical movement on constrained roads is notoriously difficult without RSU infrastructure, the V4 Hybrid Mitigation proves that a purely decentralized, vehicle-to-vehicle algorithm can entirely defeat digital linking ({hybrid_link:.0f}%) while degrading physical tracking by nearly {base_succ - hybrid_succ:.1f}%, establishing a robust privacy shield for connected vehicles.
     """)
 
 with tab2:
